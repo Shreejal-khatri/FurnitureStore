@@ -3,10 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FaFacebookF, FaLinkedinIn, FaTwitter, FaHeart, FaRegHeart } from 'react-icons/fa';
 import Navbar from '../components/Navbar'; 
 import Footer from '../components/Footer'; 
+import { useAuth } from '../context/AuthContext'; 
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { token, user } = useAuth(); 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,14 +33,9 @@ const ProductDetail = () => {
     return imagePath.startsWith('/') ? `${BASE_URL}${imagePath}` : `${BASE_URL}/${imagePath}`;
   };
 
-  
-  const getToken = () => {
-    return localStorage.getItem('token') || sessionStorage.getItem('token');
-  };
 
-  
   const isAuthenticated = () => {
-    return !!getToken();
+    return !!token;
   };
 
 
@@ -46,7 +43,6 @@ const ProductDetail = () => {
     if (!isAuthenticated() || !product) return;
     
     try {
-      const token = getToken();
       const API_BASE_URL = import.meta.env.VITE_API_URL;
       
       const response = await fetch(`${API_BASE_URL}/wishlist`, {
@@ -126,6 +122,13 @@ const ProductDetail = () => {
   }, [product]);
 
   const handleAddToCart = () => {
+    
+    if (!isAuthenticated()) {
+      console.log('No token found');
+      navigate('/login-register');
+      return;
+    }
+
     
     if (!selectedSize || !selectedColor) {
       setShowError(true);
@@ -210,7 +213,7 @@ const ProductDetail = () => {
     if (!isAuthenticated()) {
       
       alert('Please login to add items to your wishlist');
-      navigate('/login');
+      navigate('/login-register');
       return;
     }
 
@@ -219,7 +222,6 @@ const ProductDetail = () => {
     setWishlistLoading(true);
     
     try {
-      const token = getToken();
       const API_BASE_URL = import.meta.env.VITE_API_URL;
 
       if (isFavorite) {
