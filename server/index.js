@@ -12,6 +12,8 @@ const wishlistRoutes = require('./route/wishlist');
 const paymentRoutes = require('./route/paymentRoutes'); 
 const blogRoutes = require('./route/blogRoutes');
 const contactRoutes = require('./route/contactRoutes');
+const reviewRoutes = require('./route/reviewRoutes');
+
 
 
 
@@ -40,7 +42,7 @@ app.use(
   })
 );
 
-// Auth Routes
+//Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/products", productRoutes);
@@ -49,6 +51,7 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api", paymentRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/contact", contactRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 //404 handler
 app.use((req, res, next) => {

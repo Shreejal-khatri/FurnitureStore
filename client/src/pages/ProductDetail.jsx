@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaFacebookF, FaLinkedinIn, FaTwitter, FaHeart, FaRegHeart } from 'react-icons/fa';
+import { FaFacebookF, FaLinkedinIn, FaTwitter, FaHeart, FaRegHeart, FaStar, FaStarHalfAlt } from 'react-icons/fa';
 import Navbar from '../components/Navbar'; 
 import Footer from '../components/Footer'; 
 import { useAuth } from '../context/AuthContext'; 
@@ -24,6 +24,14 @@ const ProductDetail = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [wishlistLoading, setWishlistLoading] = useState(false);
 
+
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [hasUserReviewed, setHasUserReviewed] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
+
   
   const getImageUrl = (imagePath) => {
     if (!imagePath) return '/placeholder-image.jpg';
@@ -38,6 +46,226 @@ const ProductDetail = () => {
     return !!token;
   };
 
+  //Fetch reviews from API
+  const fetchReviews = async () => {
+    if (!id) return;
+    
+    try {
+      setReviewsLoading(true);
+      const API_BASE_URL = import.meta.env.VITE_API_URL;
+      
+      //Fetch reviews
+      const reviewsResponse = await fetch(`${API_BASE_URL}/reviews/product/${id}`);
+      if (reviewsResponse.ok) {
+        const reviewsData = await reviewsResponse.json();
+        if (reviewsData.success) {
+          setReviews(reviewsData.data.reviews);
+        }
+      }
+      
+      //Fetch review statistics
+      const statsResponse = await fetch(`${API_BASE_URL}/reviews/product/${id}/stats`);
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        if (statsData.success) {
+          setReviewStats(statsData.data);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching reviews:", err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  //Check if user has reviewed this product
+  const checkUserReviewStatus = async () => {
+    if (!isAuthenticated() || !id) return;
+    
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${API_BASE_URL}/reviews/product/${id}/check`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setHasUserReviewed(data.data.hasReviewed);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking review status:', error);
+    }
+  };
+
+const submitReview = async (reviewData) => {
+  if (!isAuthenticated()) {
+    navigate('/login-register');
+    return false;
+  }
+
+  try {
+    setSubmittingReview(true);
+    const API_BASE_URL = import.meta.env.VITE_API_URL;
+    
+    const reviewPayload = {
+      productId: id,
+      rating: reviewData.rating,
+      title: reviewData.title,
+      comment: reviewData.comment,
+    };
+
+    console.log('Submitting review:', reviewPayload); 
+
+    const response = await fetch(`${API_BASE_URL}/reviews`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(reviewPayload)
+    });
+
+    console.log('Response status:', response.status); 
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log('Response data:', result); 
+      
+      if (result.success) {
+        await fetchReviews();
+        await checkUserReviewStatus();
+        setShowReviewForm(false);
+        setShowSuccess(true);
+        setErrorMessage('Review submitted successfully!');
+        setTimeout(() => setShowSuccess(false), 3000);
+        return true;
+      }
+    } else {
+      const errorData = await response.json();
+      console.log('Error response:', errorData); 
+      setShowError(true);
+      setErrorMessage(errorData.message || 'Failed to submit review');
+      setTimeout(() => setShowError(false), 3000);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error submitting review:', error);
+    setShowError(true);
+    setErrorMessage('Failed to submit review. Please try again.');
+    setTimeout(() => setShowError(false), 3000);
+    return false;
+  } finally {
+    setSubmittingReview(false);
+  }
+};
+
+  const ReviewForm = () => {
+    const [rating, setRating] = useState(0);
+    const [title, setTitle] = useState('');
+    const [comment, setComment] = useState('');
+    const [hoverRating, setHoverRating] = useState(0);
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (rating === 0) {
+        setShowError(true);
+        setErrorMessage('Please select a rating');
+        setTimeout(() => setShowError(false), 3000);
+        return;
+      }
+
+      const success = await submitReview({
+        rating,
+        title,
+        comment
+      });
+      
+      if (success) {
+        setRating(0);
+        setTitle('');
+        setComment('');
+      }
+    };
+
+    const resetForm = () => {
+      setRating(0);
+      setTitle('');
+      setComment('');
+      setShowReviewForm(false);
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="review-form">
+        <h3>Write a Review</h3>
+        
+        <div className="rating-input">
+          <label>Rating *</label>
+          <div className="star-rating">
+            {[1, 2, 3, 4, 5].map(star => (
+              <button
+                key={star}
+                type="button"
+                className={`star-btn ${star <= (hoverRating || rating) ? 'active' : ''}`}
+                onClick={() => setRating(star)}
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(0)}
+              >
+                <FaStar />
+              </button>
+            ))}
+          </div>
+          <div className="rating-text">
+            {rating > 0 ? `${rating} star${rating > 1 ? 's' : ''}` : 'Select rating'}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <input
+            type="text"
+            placeholder="Review title *"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            maxLength={100}
+          />
+        </div>
+
+        <div className="form-group">
+          <textarea
+            placeholder="Your review *"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            required
+            rows="4"
+            maxLength={1000}
+          />
+          <div className="char-count">{comment.length}/1000</div>
+        </div>
+
+        <div className="form-actions">
+          <button 
+            type="button" 
+            onClick={resetForm}
+            disabled={submittingReview}
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            disabled={submittingReview}
+            className="submit-btn"
+          >
+            {submittingReview ? 'Submitting...' : 'Submit Review'}
+          </button>
+        </div>
+      </form>
+    );
+  };
 
   const checkWishlistStatus = async () => {
     if (!isAuthenticated() || !product) return;
@@ -111,6 +339,7 @@ const ProductDetail = () => {
     if (id) {
       fetchProduct();
       fetchRelatedProducts();
+      fetchReviews();
     }
   }, [id]);
 
@@ -118,6 +347,9 @@ const ProductDetail = () => {
   useEffect(() => {
     if (product) {
       checkWishlistStatus();
+      if (isAuthenticated()) {
+        checkUserReviewStatus();
+      }
     }
   }, [product]);
 
@@ -277,6 +509,27 @@ const ProductDetail = () => {
     navigate('/shop');
   };
 
+  const renderStars = (rating) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(<FaStar key={i} className="star filled" />);
+    }
+
+    if (hasHalfStar) {
+      stars.push(<FaStarHalfAlt key="half" className="star filled" />);
+    }
+
+    const emptyStars = 5 - stars.length;
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(<FaStar key={`empty-${i}`} className="star empty" />);
+    }
+
+    return stars;
+  };
+
   if (loading) {
     return (
       <div className="product-detail-page">
@@ -311,7 +564,7 @@ const ProductDetail = () => {
       {/* Success/Error Messages */}
       {showSuccess && (
         <div className="toast toast-success">
-          ✓ Product added to cart successfully!
+          ✓ {errorMessage}
         </div>
       )}
       
@@ -368,9 +621,11 @@ const ProductDetail = () => {
             <div className="price">Rs. {product.price}</div>
             <div className="rating">
               <div className="stars">
-                <span>★★★★☆</span>
+                {reviewStats ? renderStars(reviewStats.averageRating) : <span>★★★★☆</span>}
               </div>
-              <span className="review-count">5 Customer Review</span>
+              <span className="review-count">
+                {reviewStats ? `${reviewStats.totalReviews} Customer Review${reviewStats.totalReviews !== 1 ? 's' : ''}` : '5 Customer Review'}
+              </span>
             </div>
             
             <p className="product-description">
@@ -517,7 +772,7 @@ const ProductDetail = () => {
               className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`}
               onClick={() => setActiveTab('reviews')}
             >
-              Reviews [5]
+              Reviews [{reviewStats ? reviewStats.totalReviews : 5}]
             </button>
           </div>
           
@@ -603,8 +858,101 @@ const ProductDetail = () => {
               </div>
             )}
             {activeTab === 'reviews' && (
-              <div>
-                <p>Customer reviews would be displayed here...</p>
+              <div className="reviews-section">
+                {reviewsLoading ? (
+                  <div className="loading-reviews">Loading reviews...</div>
+                ) : (
+                  <>
+                    <div className="reviews-header">
+                      <div className="reviews-summary">
+                        <div className="overall-rating">
+                          <div className="rating-number">
+                            {reviewStats ? reviewStats.averageRating.toFixed(1) : '4.8'}
+                          </div>
+                          <div className="rating-stars">
+                            {renderStars(reviewStats ? reviewStats.averageRating : 4.8)}
+                          </div>
+                          <div className="total-reviews">Based on {reviewStats?.totalReviews || 5} reviews</div>
+                        </div>
+                        <div className="rating-breakdown">
+                          {[5, 4, 3, 2, 1].map(rating => {
+                            const percentage = reviewStats?.ratingDistribution[rating]?.percentage || 0;
+                            const count = reviewStats?.ratingDistribution[rating]?.count || 0;
+                            
+                            return (
+                              <div key={rating} className="rating-bar">
+                                <span>{rating} stars</span>
+                                <div className="bar-container">
+                                  <div className="bar-fill" style={{width: `${percentage}%`}}></div>
+                                </div>
+                                <span>{count}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      {isAuthenticated() && !hasUserReviewed && (
+                        <button 
+                          className="add-review-btn"
+                          onClick={() => setShowReviewForm(true)}
+                        >
+                          Write a Review
+                        </button>
+                      )}
+                      
+                      {!isAuthenticated() && (
+                        <div className="review-login-prompt">
+                          <p>Want to share your experience?</p>
+                          <button 
+                            className="login-to-review-btn"
+                            onClick={() => navigate('/login-register')}
+                          >
+                            Login to Write a Review
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {showReviewForm && <ReviewForm />}
+
+                    {hasUserReviewed && (
+                      <div className="user-review-notice">
+                        <p>✓ You have already reviewed this product</p>
+                      </div>
+                    )}
+
+                    <div className="reviews-list">
+                      {reviews.length > 0 ? (
+                        reviews.map(review => (
+                          <div key={review._id} className="review-item">
+                            <div className="review-header">
+                              <div className="reviewer-info">
+                                <div className="reviewer-name">
+                                  {review.customerName}
+                                  {user && review.customerName === user.name && (
+                                    <span className="your-review-badge">Your Review</span>
+                                  )}
+                                </div>
+                                {review.verified && <span className="verified-badge">Verified Purchase</span>}
+                              </div>
+                              <div className="review-date">{review.formattedDate || review.date}</div>
+                            </div>
+                            <div className="review-rating">
+                              {renderStars(review.rating)}
+                            </div>
+                            <div className="review-title">{review.title}</div>
+                            <div className="review-comment">{review.comment}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="no-reviews">
+                          <p>No reviews yet. Be the first to review this product!</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1241,6 +1589,363 @@ const ProductDetail = () => {
           grid-column: 1 / -1;
         }
 
+        /* Reviews Section Styles */
+        .reviews-section {
+          padding: 2rem 0;
+        }
+
+        .reviews-summary {
+          display: grid;
+          grid-template-columns: 1fr 2fr;
+          gap: 3rem;
+          margin-bottom: 3rem;
+          padding: 2rem;
+          background: #f8f9fa;
+          border-radius: 12px;
+        }
+
+        .overall-rating {
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .rating-number {
+          font-size: 3rem;
+          font-weight: 700;
+          color: #111827;
+          margin-bottom: 0.5rem;
+        }
+
+        .rating-stars {
+          display: flex;
+          gap: 2px;
+          margin-bottom: 0.5rem;
+        }
+
+        .star {
+          font-size: 1.2rem;
+        }
+
+        .star.filled {
+          color: var(--gold);
+        }
+
+        .star.empty {
+          color: #d1d5db;
+        }
+
+        .total-reviews {
+          color: var(--muted);
+          font-size: 0.9rem;
+        }
+
+        .rating-breakdown {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .rating-bar {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .rating-bar span:first-child {
+          min-width: 60px;
+          font-size: 0.9rem;
+          color: var(--muted);
+        }
+
+        .bar-container {
+          flex: 1;
+          height: 8px;
+          background: #e5e7eb;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .bar-fill {
+          height: 100%;
+          background: var(--gold);
+          border-radius: 4px;
+          transition: width 0.5s ease;
+        }
+
+        .rating-bar span:last-child {
+          min-width: 20px;
+          text-align: right;
+          font-size: 0.9rem;
+          color: var(--muted);
+        }
+
+        .reviews-list {
+          display: flex;
+          flex-direction: column;
+          gap: 2rem;
+        }
+
+        .review-item {
+          padding: 2rem;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          background: white;
+          transition: var(--transition);
+        }
+
+        .review-item:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+        }
+
+        .review-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 1rem;
+        }
+
+        .reviewer-info {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .reviewer-name {
+          font-weight: 600;
+          color: #111827;
+        }
+
+        .verified-badge {
+          background: #10b981;
+          color: white;
+          padding: 0.25rem 0.5rem;
+          border-radius: 12px;
+          font-size: 0.7rem;
+          font-weight: 500;
+        }
+
+        .review-date {
+          color: var(--muted);
+          font-size: 0.9rem;
+        }
+
+        .review-rating {
+          display: flex;
+          gap: 2px;
+          margin-bottom: 0.75rem;
+        }
+
+        .review-title {
+          font-weight: 600;
+          font-size: 1.1rem;
+          margin-bottom: 0.5rem;
+          color: #111827;
+        }
+
+        .review-comment {
+          line-height: 1.6;
+          color: #374151;
+        }
+
+        /* Review Form Styles */
+        .review-form {
+          background: #f8f9fa;
+          padding: 2rem;
+          border-radius: 12px;
+          margin-bottom: 2rem;
+          border: 1px solid #e5e7eb;
+        }
+
+        .review-form h3 {
+          margin-bottom: 1.5rem;
+          color: #111827;
+        }
+
+        .rating-input {
+          margin-bottom: 1.5rem;
+        }
+
+        .rating-input label {
+          display: block;
+          margin-bottom: 0.5rem;
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .star-rating {
+          display: flex;
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .star-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 1.5rem;
+          color: #d1d5db;
+          transition: color 0.2s ease;
+          padding: 0.25rem;
+        }
+
+        .star-btn.active {
+          color: var(--gold);
+        }
+
+        .star-btn:hover {
+          color: var(--gold);
+          transform: scale(1.1);
+        }
+
+        .rating-text {
+          font-size: 0.9rem;
+          color: var(--muted);
+        }
+
+        .form-group {
+          margin-bottom: 1.5rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 1rem;
+          transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+          outline: none;
+          border-color: var(--gold);
+        }
+
+        .char-count {
+          text-align: right;
+          font-size: 0.8rem;
+          color: var(--muted);
+          margin-top: 0.25rem;
+        }
+
+        .form-actions {
+          display: flex;
+          gap: 1rem;
+          justify-content: flex-end;
+        }
+
+        .form-actions button {
+          padding: 0.75rem 1.5rem;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .form-actions button[type="button"] {
+          background: white;
+          color: #374151;
+        }
+
+        .form-actions button[type="button"]:hover {
+          background: #f3f4f6;
+        }
+
+        .form-actions .submit-btn {
+          background: var(--gold);
+          color: white;
+          border-color: var(--gold);
+        }
+
+        .form-actions .submit-btn:hover:not(:disabled) {
+          background: #b8941f;
+          transform: translateY(-1px);
+        }
+
+        .form-actions button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* Review Header Styles */
+        .reviews-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 2rem;
+          gap: 2rem;
+        }
+
+        .add-review-btn {
+          background: var(--gold);
+          color: white;
+          border: none;
+          padding: 0.75rem 1.5rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 500;
+          transition: all 0.3s ease;
+        }
+
+        .add-review-btn:hover {
+          background: #b8941f;
+          transform: translateY(-2px);
+        }
+
+        .review-login-prompt {
+          text-align: center;
+          padding: 1rem;
+          background: #f0f9ff;
+          border-radius: 8px;
+          border: 1px solid #bae6fd;
+        }
+
+        .login-to-review-btn {
+          background: #0ea5e9;
+          color: white;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 6px;
+          cursor: pointer;
+          margin-top: 0.5rem;
+        }
+
+        .user-review-notice {
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          color: #166534;
+          padding: 1rem;
+          border-radius: 8px;
+          margin-bottom: 1rem;
+        }
+
+        .your-review-badge {
+          background: var(--gold);
+          color: white;
+          padding: 0.25rem 0.5rem;
+          border-radius: 12px;
+          font-size: 0.7rem;
+          margin-left: 0.5rem;
+        }
+
+        .loading-reviews {
+          text-align: center;
+          padding: 2rem;
+          color: var(--muted);
+        }
+
+        .no-reviews {
+          text-align: center;
+          padding: 3rem;
+          color: var(--muted);
+          font-style: italic;
+        }
+
         /* Product Gallery */
         .product-gallery {
           display: grid;
@@ -1414,6 +2119,16 @@ const ProductDetail = () => {
             right: 20px;
             width: auto;
           }
+
+          .reviews-summary {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+          }
+
+          .reviews-header {
+            flex-direction: column;
+            align-items: stretch;
+          }
         }
 
         @media (max-width: 640px) {
@@ -1453,6 +2168,11 @@ const ProductDetail = () => {
 
           .additional-info-grid {
             grid-template-columns: 1fr;
+          }
+
+          .review-header {
+            flex-direction: column;
+            gap: 0.5rem;
           }
         }
       `}</style>
