@@ -4,7 +4,23 @@ import axios from 'axios';
 export default function ProductManagement() {
   const [products, setProducts] = useState([]);
   const [newProduct, setNewProduct] = useState({
-    name: '', price: '', description: '', category: '', stock: ''
+    name: '', 
+    price: '', 
+    description: '', 
+    category: '', 
+    stock: '',
+    additionalInfo: {
+      material: '',
+      color: '',
+      dimensions: '',
+      weight: '',
+      assemblyRequired: false,
+      careInstructions: '',
+      warranty: '',
+      manufacturer: '',
+      style: '',
+      features: []
+    }
   });
   const [editingProduct, setEditingProduct] = useState(null);
 
@@ -102,6 +118,28 @@ export default function ProductManagement() {
     }));
   };
 
+  const handleAdditionalInfoChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setNewProduct(prev => ({
+      ...prev,
+      additionalInfo: {
+        ...prev.additionalInfo,
+        [name]: type === 'checkbox' ? checked : value
+      }
+    }));
+  };
+
+  const handleFeaturesChange = (e) => {
+    const features = e.target.value.split(',').map(f => f.trim()).filter(f => f);
+    setNewProduct(prev => ({
+      ...prev,
+      additionalInfo: {
+        ...prev.additionalInfo,
+        features
+      }
+    }));
+  };
+
 
   const handleAddProduct = async () => {
   if (!newProduct.name || !newProduct.price || !newProduct.description || !newProduct.category || !newProduct.stock) {
@@ -119,6 +157,8 @@ export default function ProductManagement() {
     formData.append('category', newProduct.category);
     formData.append('stock', newProduct.stock);
 
+    formData.append('additionalInfo', JSON.stringify(newProduct.additionalInfo));
+
     if (addImageFile) {
       formData.append('image', addImageFile);
     }
@@ -132,7 +172,25 @@ export default function ProductManagement() {
     });
 
     setProducts([res.data, ...products]);
-    setNewProduct({ name: '', price: '', description: '', category: '', stock: '' });
+    setNewProduct({ 
+      name: '', 
+      price: '', 
+      description: '', 
+      category: '', 
+      stock: '',
+      additionalInfo: {
+        material: '',
+        color: '',
+        dimensions: '',
+        weight: '',
+        assemblyRequired: false,
+        careInstructions: '',
+        warranty: '',
+        manufacturer: '',
+        style: '',
+        features: []
+      }
+    });
     setAddImageFile(null);
     setAddImagePreview(null);
     setError('');
@@ -153,7 +211,21 @@ export default function ProductManagement() {
 
   
   const openEditModal = (product) => {
-    setEditingProduct({ ...product });
+    setEditingProduct({ 
+      ...product,
+      additionalInfo: product.additionalInfo || {
+        material: '',
+        color: '',
+        dimensions: '',
+        weight: '',
+        assemblyRequired: false,
+        careInstructions: '',
+        warranty: '',
+        manufacturer: '',
+        style: '',
+        features: []
+      }
+    });
     setEditImageFile(null);
     setEditImagePreview(
       product.imageUrl ? `${getImageUrl(product.imageUrl)}?t=${Date.now()}` : null
@@ -207,6 +279,28 @@ export default function ProductManagement() {
     }));
   };
 
+  const handleEditAdditionalInfoChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEditingProduct(prev => ({
+      ...prev,
+      additionalInfo: {
+        ...prev.additionalInfo,
+        [name]: type === 'checkbox' ? checked : value
+      }
+    }));
+  };
+
+  const handleEditFeaturesChange = (e) => {
+    const features = e.target.value.split(',').map(f => f.trim()).filter(f => f);
+    setEditingProduct(prev => ({
+      ...prev,
+      additionalInfo: {
+        ...prev.additionalInfo,
+        features
+      }
+    }));
+  };
+
 
   const handleEditProduct = async () => {
   if (!editingProduct.name || !editingProduct.price || !editingProduct.description || !editingProduct.category || !editingProduct.stock) {
@@ -223,6 +317,8 @@ export default function ProductManagement() {
     formData.append('description', editingProduct.description);
     formData.append('category', editingProduct.category);
     formData.append('stock', editingProduct.stock);
+
+    formData.append('additionalInfo', JSON.stringify(editingProduct.additionalInfo));
 
     if (editImageFile) {
       formData.append('image', editImageFile);
@@ -517,13 +613,9 @@ const handleDeleteProduct = async (id) => {
                       required
                     />
                   </div>
-                </div>
 
-                <div style={styles.formColumn}>
                   <div style={styles.formGroup}>
-                    <label style={styles.label}>
-                      Description <span style={styles.required}>*</span>
-                    </label>
+                    <label style={styles.label}>Description <span style={styles.required}>*</span></label>
                     <textarea
                       name="description"
                       placeholder="Enter detailed product description..."
@@ -531,13 +623,14 @@ const handleDeleteProduct = async (id) => {
                       onChange={handleEditInputChange}
                       style={styles.textarea}
                       required
-                      rows="6"
+                      rows="4"
                     />
                   </div>
+                </div>
 
+                <div style={styles.formColumn}>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Product Image</label>
-
                     {editImagePreview ? (
                       <div style={styles.imagePreviewContainer}>
                         <img
@@ -578,14 +671,135 @@ const handleDeleteProduct = async (id) => {
                             </svg>
                           </div>
                           <div style={styles.fileDropText}>
-                            <span style={styles.fileDropTitle}>
-                              Click to upload or drag and drop
-                            </span>
-                            <span style={styles.fileDropSubtitle}>PNG, JPG, GIF up to 5MB</span>
+                            <span style={styles.fileDropTitle}>Click to upload</span>
+                            <span style={styles.fileDropSubtitle}>PNG, JPG up to 5MB</span>
                           </div>
                         </label>
                       </div>
                     )}
+                  </div>
+
+                  <h3 style={styles.sectionSubtitle}>Additional Information</h3>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Material</label>
+                    <input
+                      type="text"
+                      name="material"
+                      placeholder="e.g., Solid Oak Wood"
+                      value={editingProduct.additionalInfo?.material || ''}
+                      onChange={handleEditAdditionalInfoChange}
+                      style={styles.input}
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Color</label>
+                    <input
+                      type="text"
+                      name="color"
+                      placeholder="e.g., Natural Brown"
+                      value={editingProduct.additionalInfo?.color || ''}
+                      onChange={handleEditAdditionalInfoChange}
+                      style={styles.input}
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Dimensions</label>
+                    <input
+                      type="text"
+                      name="dimensions"
+                      placeholder="e.g., cm (W) x 90cm (D) x 75cm (H)180"
+                      value={editingProduct.additionalInfo?.dimensions || ''}
+                      onChange={handleEditAdditionalInfoChange}
+                      style={styles.input}
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Weight</label>
+                    <input
+                      type="text"
+                      name="weight"
+                      placeholder="e.g., 45kg"
+                      value={editingProduct.additionalInfo?.weight || ''}
+                      onChange={handleEditAdditionalInfoChange}
+                      style={styles.input}
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Style</label>
+                    <input
+                      type="text"
+                      name="style"
+                      placeholder="e.g., Modern, Traditional, Scandinavian"
+                      value={editingProduct.additionalInfo?.style || ''}
+                      onChange={handleEditAdditionalInfoChange}
+                      style={styles.input}
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Manufacturer</label>
+                    <input
+                      type="text"
+                      name="manufacturer"
+                      placeholder="e.g., Nordic Furniture Co."
+                      value={editingProduct.additionalInfo?.manufacturer || ''}
+                      onChange={handleEditAdditionalInfoChange}
+                      style={styles.input}
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Warranty</label>
+                    <input
+                      type="text"
+                      name="warranty"
+                      placeholder="e.g., 5 years structural warranty"
+                      value={editingProduct.additionalInfo?.warranty || ''}
+                      onChange={handleEditAdditionalInfoChange}
+                      style={styles.input}
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Care Instructions</label>
+                    <textarea
+                      name="careInstructions"
+                      placeholder="e.g., Wipe with damp cloth. Avoid direct sunlight."
+                      value={editingProduct.additionalInfo?.careInstructions || ''}
+                      onChange={handleEditAdditionalInfoChange}
+                      style={styles.textarea}
+                      rows="3"
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.checkboxLabel}>
+                      <input
+                        type="checkbox"
+                        name="assemblyRequired"
+                        checked={editingProduct.additionalInfo?.assemblyRequired || false}
+                        onChange={handleEditAdditionalInfoChange}
+                        style={styles.checkbox}
+                      />
+                      <span>Assembly Required</span>
+                    </label>
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Features (comma-separated)</label>
+                    <input
+                      type="text"
+                      name="features"
+                      placeholder="e.g., Extendable, Scratch-resistant, Eco-friendly"
+                      value={editingProduct.additionalInfo?.features?.join(', ') || ''}
+                      onChange={handleEditFeaturesChange}
+                      style={styles.input}
+                    />
                   </div>
                 </div>
               </div>
@@ -622,6 +836,7 @@ const handleDeleteProduct = async (id) => {
         <h2 style={styles.sectionTitle}>Add New Product</h2>
         <div style={styles.formGrid}>
           <div style={styles.formColumn}>
+            {/* ADDED MISSING REQUIRED FIELDS */}
             <div style={styles.formGroup}>
               <label style={styles.label}>
                 Product Name <span style={styles.required}>*</span>
@@ -692,9 +907,7 @@ const handleDeleteProduct = async (id) => {
                 required
               />
             </div>
-          </div>
 
-          <div style={styles.formColumn}>
             <div style={styles.formGroup}>
               <label style={styles.label}>
                 Description <span style={styles.required}>*</span>
@@ -709,7 +922,9 @@ const handleDeleteProduct = async (id) => {
                 rows="6"
               />
             </div>
+          </div>
 
+          <div style={styles.formColumn}>
             <div style={styles.formGroup}>
               <label style={styles.label}>Product Image</label>
 
@@ -761,6 +976,129 @@ const handleDeleteProduct = async (id) => {
                   </label>
                 </div>
               )}
+            </div>
+
+            <h3 style={styles.sectionSubtitle}>Additional Information</h3>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Material</label>
+              <input
+                type="text"
+                name="material"
+                placeholder="e.g., Solid Oak Wood"
+                value={newProduct.additionalInfo.material}
+                onChange={handleAdditionalInfoChange}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Color</label>
+              <input
+                type="text"
+                name="color"
+                placeholder="e.g., Natural Brown"
+                value={newProduct.additionalInfo.color}
+                onChange={handleAdditionalInfoChange}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Dimensions</label>
+              <input
+                type="text"
+                name="dimensions"
+                placeholder="e.g., 180cm (W) x 90cm (D) x 75cm (H)"
+                value={newProduct.additionalInfo.dimensions}
+                onChange={handleAdditionalInfoChange}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Weight</label>
+              <input
+                type="text"
+                name="weight"
+                placeholder="e.g., 45kg"
+                value={newProduct.additionalInfo.weight}
+                onChange={handleAdditionalInfoChange}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Style</label>
+              <input
+                type="text"
+                name="style"
+                placeholder="e.g., Modern, Traditional, Scandinavian"
+                value={newProduct.additionalInfo.style}
+                onChange={handleAdditionalInfoChange}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Manufacturer</label>
+              <input
+                type="text"
+                name="manufacturer"
+                placeholder="e.g., Nordic Furniture Co."
+                value={newProduct.additionalInfo.manufacturer}
+                onChange={handleAdditionalInfoChange}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Warranty</label>
+              <input
+                type="text"
+                name="warranty"
+                placeholder="e.g., 5 years structural warranty"
+                value={newProduct.additionalInfo.warranty}
+                onChange={handleAdditionalInfoChange}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Care Instructions</label>
+              <textarea
+                name="careInstructions"
+                placeholder="e.g., Wipe with damp cloth. Avoid direct sunlight."
+                value={newProduct.additionalInfo.careInstructions}
+                onChange={handleAdditionalInfoChange}
+                style={styles.textarea}
+                rows="3"
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  name="assemblyRequired"
+                  checked={newProduct.additionalInfo.assemblyRequired}
+                  onChange={handleAdditionalInfoChange}
+                  style={styles.checkbox}
+                />
+                <span>Assembly Required</span>
+              </label>
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Features (comma-separated)</label>
+              <input
+                type="text"
+                name="features"
+                placeholder="e.g., Extendable, Scratch-resistant, Eco-friendly"
+                value={newProduct.additionalInfo.features.join(', ')}
+                onChange={handleFeaturesChange}
+                style={styles.input}
+              />
             </div>
           </div>
         </div>
@@ -1104,7 +1442,7 @@ const styles = {
   modal: {
     backgroundColor: 'white',
     borderRadius: '16px',
-    maxWidth: '900px',
+    maxWidth: '1100px',
     width: '100%',
     maxHeight: '90vh',
     overflow: 'auto',
@@ -1165,6 +1503,15 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
   },
+  sectionSubtitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#8B4513',
+    marginTop: '24px',
+    marginBottom: '16px',
+    paddingBottom: '8px',
+    borderBottom: '2px solid #fed7aa',
+  },
   formGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
@@ -1224,6 +1571,20 @@ const styles = {
     resize: 'vertical',
     minHeight: '120px',
     backgroundColor: 'white',
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#374151',
+    cursor: 'pointer',
+  },
+  checkbox: {
+    width: '18px',
+    height: '18px',
+    cursor: 'pointer',
   },
   fileDropZone: {
     border: '2px dashed #d6d3d1',

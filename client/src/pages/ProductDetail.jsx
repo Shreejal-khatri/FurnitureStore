@@ -374,7 +374,7 @@ const ProductDetail = () => {
             </div>
             
             <p className="product-description">
-              {product.description || 'Setting the bar as one of the loudest speakers in its class, the Kilburn is a compact, stout-hearted hero with a well-balanced audio which boasts a clear midrange and extended highs for a sound.'}
+              {product.description}
             </p>
 
             <div className="product-options">
@@ -524,16 +524,82 @@ const ProductDetail = () => {
           <div className="tab-content">
             {activeTab === 'description' && (
               <div>
-                <p>{product.description || "Embodying the raw, wayward spirit of rock 'n' roll, the Kilburn portable active stereo speaker takes the unmistakable look and sound of Marshall, unplugs the chords, and takes the show on the road."}</p>
-                <p>Weighing in under 7 pounds, the Kilburn is a lightweight piece of vintage styled engineering. Setting the bar as one of the loudest speakers in its class, the Kilburn is a compact, stout-hearted hero with a well-balanced audio which boasts a clear midrange and extended highs for a sound that is both articulate and pronounced. The analogue knobs allow you to fine tune the controls to your personal preferences while the guitar-influenced leather strap enables easy and stylish travel.</p>
+                <p>{product.description}</p>
               </div>
             )}
             {activeTab === 'additional' && (
-              <div>
-                <p><strong>Dimensions:</strong> {product.dimensions || 'N/A'}</p>
-                <p><strong>Material:</strong> {product.material || 'High-quality fabric'}</p>
-                <p><strong>Weight:</strong> {product.weight || 'Approx. 50kg'}</p>
-                <p><strong>Warranty:</strong> {product.warranty || '2 years'}</p>
+              <div className="additional-info-grid">
+                {product.additionalInfo?.material && (
+                  <div className="info-item">
+                    <strong>Material:</strong>
+                    <span>{product.additionalInfo.material}</span>
+                  </div>
+                )}
+                {product.additionalInfo?.color && (
+                  <div className="info-item">
+                    <strong>Color:</strong>
+                    <span>{product.additionalInfo.color}</span>
+                  </div>
+                )}
+                {product.additionalInfo?.dimensions && (
+                  <div className="info-item">
+                    <strong>Dimensions:</strong>
+                    <span>{product.additionalInfo.dimensions}</span>
+                  </div>
+                )}
+                {product.additionalInfo?.weight && (
+                  <div className="info-item">
+                    <strong>Weight:</strong>
+                    <span>{product.additionalInfo.weight}</span>
+                  </div>
+                )}
+                {product.additionalInfo?.style && (
+                  <div className="info-item">
+                    <strong>Style:</strong>
+                    <span>{product.additionalInfo.style}</span>
+                  </div>
+                )}
+                {product.additionalInfo?.manufacturer && (
+                  <div className="info-item">
+                    <strong>Manufacturer:</strong>
+                    <span>{product.additionalInfo.manufacturer}</span>
+                  </div>
+                )}
+                {product.additionalInfo?.warranty && (
+                  <div className="info-item">
+                    <strong>Warranty:</strong>
+                    <span>{product.additionalInfo.warranty}</span>
+                  </div>
+                )}
+                {product.additionalInfo?.careInstructions && (
+                  <div className="info-item full-width">
+                    <strong>Care Instructions:</strong>
+                    <span>{product.additionalInfo.careInstructions}</span>
+                  </div>
+                )}
+                {product.additionalInfo?.assemblyRequired !== undefined && (
+                  <div className="info-item">
+                    <strong>Assembly Required:</strong>
+                    <span>{product.additionalInfo.assemblyRequired ? 'Yes' : 'No'}</span>
+                  </div>
+                )}
+                {product.additionalInfo?.features && product.additionalInfo.features.length > 0 && (
+                  <div className="info-item full-width">
+                    <strong>Features:</strong>
+                    <div className="features-list">
+                      {product.additionalInfo.features.map((feature, index) => (
+                        <span key={index} className="feature-tag">{feature}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Fallback for products without additionalInfo */}
+                {(!product.additionalInfo || Object.keys(product.additionalInfo).length === 0) && (
+                  <div className="no-additional-info">
+                    <p>No additional information available for this product.</p>
+                  </div>
+                )}
               </div>
             )}
             {activeTab === 'reviews' && (
@@ -1105,6 +1171,76 @@ const ProductDetail = () => {
           margin-bottom: 1.5rem;
         }
 
+        /* Additional Information Styles */  
+        .additional-info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+          margin-top: 1rem;
+        }
+        
+        .info-item {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          padding: 20px;
+          border: 1px solid #eee;
+          border-radius: 8px;
+          background: white;
+          transition: all 0.3s ease;
+          cursor: pointer;
+          margin-bottom: 15px;
+        }
+        
+        .info-item:hover {
+          border-color: #333;
+        }
+        
+        .info-item:last-child {
+          margin-bottom: 0;
+        }
+        
+        .info-item.full-width {
+          grid-column: 1 / -1;
+        }
+        
+        .info-item strong {
+          font-size: 18px;
+          font-weight: 600;
+          color: #333;
+          margin-bottom: 8px;
+        }
+        
+        .info-item span {
+          font-size: 15px;
+          color: #666;
+          line-height: 1.6;
+        }
+        
+        .features-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+          margin-top: 0.5rem;
+        }
+        
+        .feature-tag {
+          background: var(--gold);
+          color: white;
+          padding: 0.25rem 0.75rem;
+          border-radius: 20px;
+          font-size: 0.8rem;
+          font-weight: 500;
+        }
+        
+        .no-additional-info {
+          text-align: center;
+          padding: 2rem;
+          color: var(--muted);
+          font-style: italic;
+          grid-column: 1 / -1;
+        }
+
         /* Product Gallery */
         .product-gallery {
           display: grid;
@@ -1313,6 +1449,10 @@ const ProductDetail = () => {
 
           .wishlist-btn {
             width: 100%;
+          }
+
+          .additional-info-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

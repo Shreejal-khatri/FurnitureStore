@@ -30,6 +30,48 @@ const productSchema = new mongoose.Schema({
   imageUrl: {
     type: String,
     default: null
+  },
+  additionalInfo: {
+    material: { 
+      type: String,
+      default: ''
+    },
+    color: { 
+      type: String,
+      default: ''
+    },
+    dimensions: {
+      type: String,
+      default: '' 
+    },
+    weight: {
+      type: String,
+      default: '' 
+    },
+    assemblyRequired: {
+      type: Boolean,
+      default: false
+    },
+    careInstructions: {
+      type: String,
+      default: ''
+    },
+    warranty: { 
+      type: String,
+      default: ''
+    },
+    manufacturer: { 
+      type: String,
+      default: ''
+    },
+    style: {
+      type: String,
+      default: '' 
+    },
+    features: { 
+      type: [String],
+      default: [] 
+    }
   }
 }, {
   timestamps: true

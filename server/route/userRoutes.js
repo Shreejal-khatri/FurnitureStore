@@ -64,13 +64,13 @@ router.put("/profile", protect, async (req, res) => {
   try {
     const { username, phone, address } = req.body;
 
-    // Build update object (only include fields that were sent)
+    //Build update object (only include fields that were sent)
     const updateFields = {};
     if (username !== undefined) updateFields.username = username;
     if (phone !== undefined) updateFields.phone = phone;
     if (address !== undefined) updateFields.address = address;
 
-    // Update user
+    //Update user
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       updateFields,

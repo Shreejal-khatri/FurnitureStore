@@ -3,10 +3,10 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Admin = require('../model/User'); 
 const adminAuth = require("../middleware/adminAuth");
-const { protect } = require('../middleware/authMiddleware'); // Added: For token verification
-const Order = require('../model/Order'); // Added: For order queries/updates
-const User = require('../model/User'); // Add this import
-const Product = require('../model/Product'); // Add this import - make sure this model exists
+const { protect } = require('../middleware/authMiddleware'); 
+const Order = require('../model/Order'); 
+const User = require('../model/User'); 
+const Product = require('../model/Product'); 
 const router = express.Router();
 
 
@@ -25,7 +25,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Email already exists' });
     }
 
-    // Create admin (password will be hashed automatically by pre-save hook)
+    
     const admin = await Admin.create({
       username,
       email: email.toLowerCase().trim(),
@@ -73,19 +73,19 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Find admin by email
+    //Find admin by email
     const admin = await Admin.findOne({ email: email.toLowerCase().trim() });
     if (!admin || admin.role !== 'admin') {
       console.log("Admin not found or role mismatch");
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Compare password
+    //Compare password
     const match = await bcrypt.compare(password, admin.password);
     console.log("Password match:", match);
     if (!match) return res.status(401).json({ message: 'Invalid credentials' });
 
-    // Generate JWT with full admin data
+    //Generate JWT with full admin data
     const token = jwt.sign(
       { 
         id: admin._id, 
@@ -132,7 +132,7 @@ router.get('/me', adminAuth, async (req, res) => {
 // -------------------- GET ALL ORDERS (ADMIN ONLY) --------------------
 router.get('/orders', protect, adminAuth, async (req, res) => {
   try {
-    // Build dynamic filter from query params (matches frontend filters)
+    
     const filter = {};
     if (req.query.paymentMethod && req.query.paymentMethod !== 'all') {
       filter['paymentInfo.paymentMethod'] = req.query.paymentMethod;
@@ -145,10 +145,10 @@ router.get('/orders', protect, adminAuth, async (req, res) => {
     }
 
     const orders = await Order.find(filter)
-      .populate('items.product')  // Populate product details (e.g., for images, names in frontend)
-      .sort({ createdAt: -1 });  // Newest orders first
+      .populate('items.product')  
+      .sort({ createdAt: -1 });  
 
-    // Calculate stats on backend (optional - reduces frontend computation)
+    
     const stats = {
       total: orders.length,
       pending: orders.filter(o => o.orderStatus === 'pending').length,
@@ -164,7 +164,7 @@ router.get('/orders', protect, adminAuth, async (req, res) => {
       success: true, 
       count: orders.length, 
       orders, 
-      stats  // Frontend can use this directly
+      stats  
     });
   } catch (error) {
     console.error('Admin fetch orders error:', error);
@@ -177,7 +177,7 @@ router.patch('/order/:id/status', protect, adminAuth, async (req, res) => {
   try {
     const { orderStatus } = req.body;
     
-    // Validate status
+  
     const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
     if (!validStatuses.includes(orderStatus)) {
       return res.status(400).json({ error: 'Invalid order status provided' });
@@ -188,7 +188,7 @@ router.patch('/order/:id/status', protect, adminAuth, async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Optional: Business logic to prevent invalid transitions
+    
     if (orderStatus === 'delivered' && order.orderStatus !== 'shipped') {
       return res.status(400).json({ error: 'Order must be shipped before marking as delivered' });
     }
@@ -213,7 +213,7 @@ router.patch('/order/:id/payment-status', protect, adminAuth, async (req, res) =
   try {
     const { paymentStatus, paidAt } = req.body;
     
-    // Validate status
+   
     const validStatuses = ['pending', 'completed', 'failed'];
     if (!validStatuses.includes(paymentStatus)) {
       return res.status(400).json({ error: 'Invalid payment status provided' });
@@ -229,7 +229,7 @@ router.patch('/order/:id/payment-status', protect, adminAuth, async (req, res) =
       order.paymentInfo.paidAt = paidAt || new Date();
     }
 
-    // Auto-advance order status if payment completes and order is pending
+    
     if (paymentStatus === 'completed' && order.orderStatus === 'pending') {
       order.orderStatus = 'processing';
     }
@@ -246,12 +246,12 @@ router.patch('/order/:id/payment-status', protect, adminAuth, async (req, res) =
 });
 
 
-// Add these routes to your admin routes file
+
 
 // -------------------- GET DASHBOARD STATS --------------------
 router.get('/dashboard/stats', protect, adminAuth, async (req, res) => {
   try {
-    // Get total revenue (sum of all completed orders)
+ 
     const revenueResult = await Order.aggregate([
       {
         $match: {
@@ -267,13 +267,13 @@ router.get('/dashboard/stats', protect, adminAuth, async (req, res) => {
       }
     ]);
 
-    // Get user count
+
     const userCount = await User.countDocuments({ role: { $ne: 'admin' } });
     
-    // Get product count
+
     const productCount = await Product.countDocuments();
     
-    // Get order status counts
+
     const orderStatusCounts = await Order.aggregate([
       {
         $group: {
@@ -283,7 +283,7 @@ router.get('/dashboard/stats', protect, adminAuth, async (req, res) => {
       }
     ]);
 
-    // Calculate order metrics
+   
     const orderMetrics = {
       completed: orderStatusCounts.find(o => o._id === 'delivered')?.count || 0,
       pending: orderStatusCounts.find(o => o._id === 'pending')?.count || 0,
@@ -292,8 +292,7 @@ router.get('/dashboard/stats', protect, adminAuth, async (req, res) => {
       cancelled: orderStatusCounts.find(o => o._id === 'cancelled')?.count || 0
     };
 
-    // Calculate changes (you might want to compare with previous period)
-    // For now, using placeholder values
+
     const totalRevenue = revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
     const totalOrders = revenueResult.length > 0 ? revenueResult[0].totalOrders : 0;
 
@@ -302,7 +301,7 @@ router.get('/dashboard/stats', protect, adminAuth, async (req, res) => {
       totalOrders,
       activeUsers: userCount,
       totalProducts: productCount,
-      revenueChange: 12.5, // You can calculate this by comparing with previous period
+      revenueChange: 12.5, 
       ordersChange: 8.2,
       usersChange: 23.1,
       productsChange: -2.4,
@@ -321,7 +320,7 @@ router.get('/analytics/revenue', protect, adminAuth, async (req, res) => {
   try {
     const { period = '7d' } = req.query;
     
-    // Calculate date range based on period
+   
     const endDate = new Date();
     const startDate = new Date();
     
@@ -339,7 +338,7 @@ router.get('/analytics/revenue', protect, adminAuth, async (req, res) => {
         startDate.setDate(endDate.getDate() - 7);
     }
 
-    // Get daily revenue for the period
+ 
     const dailyRevenue = await Order.aggregate([
       {
         $match: {
@@ -361,14 +360,14 @@ router.get('/analytics/revenue', protect, adminAuth, async (req, res) => {
       }
     ]);
 
-    // Format for frontend
+
     const weeklyData = dailyRevenue.map(day => ({
       day: new Date(day._id).toLocaleDateString('en-US', { weekday: 'short' }),
       revenue: day.revenue,
       orders: day.orders
     }));
 
-    // If no data, return some sample structure
+ 
     if (weeklyData.length === 0) {
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       weeklyData = days.map(day => ({

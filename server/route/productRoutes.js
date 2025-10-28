@@ -17,7 +17,19 @@ router.post(
       console.log('Request body:', req.body);
       console.log('Request file:', req.file);
 
-      const { name, price, description, category, stock } = req.body;
+      const { name, price, description, category, stock, additionalInfo } = req.body;
+
+      
+      let parsedAdditionalInfo = {};
+      if (additionalInfo) {
+        try {
+          parsedAdditionalInfo = typeof additionalInfo === 'string' 
+            ? JSON.parse(additionalInfo) 
+            : additionalInfo;
+        } catch (error) {
+          console.error('Error parsing additionalInfo:', error);
+        }
+      }
 
       const product = await Product.create({
         name,
@@ -25,7 +37,8 @@ router.post(
         description,
         category,
         stock: parseInt(stock),
-        imageUrl: req.file ? req.file.path : null // ← CHANGED: Use Cloudinary URL
+        imageUrl: req.file ? req.file.path : null,
+        additionalInfo: parsedAdditionalInfo
       });
 
       res.status(201).json(product);
@@ -50,8 +63,17 @@ router.put(
       if (updates.price) updates.price = Number(updates.price);
       if (updates.stock) updates.stock = Number(updates.stock);
 
+      
+      if (updates.additionalInfo && typeof updates.additionalInfo === 'string') {
+        try {
+          updates.additionalInfo = JSON.parse(updates.additionalInfo);
+        } catch (error) {
+          console.error('Error parsing additionalInfo:', error);
+        }
+      }
+
       if (req.file) {
-        updates.imageUrl = req.file.path; // ← CHANGED: Use Cloudinary URL
+        updates.imageUrl = req.file.path; 
       } else if (!updates.imageUrl) {
         const existingProduct = await Product.findById(req.params.id);
         if (existingProduct) {

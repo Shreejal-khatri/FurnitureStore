@@ -1,11 +1,10 @@
-// routes/paymentRoutes.js
 const express = require('express');
 const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Order = require('../model/Order');
 const Product = require('../model/Product');
-const { protect } = require('../middleware/authMiddleware'); // your auth middleware
-const adminAuth = require('../middleware/adminAuth'); // your existing admin middleware
+const { protect } = require('../middleware/authMiddleware'); 
+const adminAuth = require('../middleware/adminAuth'); 
 
 
 // ---------------------------
@@ -50,7 +49,7 @@ router.post('/create-order', protect, async (req, res) => {
   try {
     const { items, shippingAddress, paymentIntentId, subtotal, shippingCost, total } = req.body;
 
-    // Validate stock & update
+    //Validate stock & update
     for (const item of items) {
       const product = await Product.findById(item.id);
       if (!product) return res.status(404).json({ error: `Product ${item.name} not found` });
@@ -59,7 +58,7 @@ router.post('/create-order', protect, async (req, res) => {
       await product.save();
     }
 
-    // Detect payment method
+    //Detect payment method
     let paymentMethod = 'stripe';
     let paymentStatus = 'completed';
     let paidAt = new Date();
@@ -74,9 +73,9 @@ router.post('/create-order', protect, async (req, res) => {
       paidAt = null;
     }
 
-    // Create order
+    //Create order
     const order = new Order({
-      user: req.user._id, // logged-in user
+      user: req.user._id, 
       items: items.map(item => ({
         product: item.id,
         name: item.name,

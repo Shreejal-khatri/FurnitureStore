@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-
-// Import the protect function from authmiddleware
 const { protect } = require('../middleware/authMiddleware');
 
 console.log('Loading User model...');
@@ -12,13 +10,13 @@ console.log('Loading Product model...');
 const Product = require('../model/Product');
 console.log('Product type:', typeof Product);
 
-//Only proceed if protect is a function
+
 if (typeof protect !== 'function') {
   console.error('ERROR: protect middleware is not a function!');
   process.exit(1);
 }
 
-//GET user's wishlist
+
 router.get('/', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate('wishlist');
